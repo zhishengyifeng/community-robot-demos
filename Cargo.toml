@@ -6,8 +6,8 @@ edition = "2021"
 # Default binary (src/main.rs) - this is automatic
 # Additional binary targets can be specified here:
 [[bin]]
-name = "base-ez-control"
-path = "example/base-ez-control.rs"
+name = "base-advanced-control"
+path = "example/base-advanced-control.rs"
 
 [dependencies]
 futures-channel = "0.3.31"
@@ -40,6 +40,9 @@ url = "2.5.0"
 lazy_static = "1.4.0"
 random = "0.14.0"
 mdns-sd = "0.14.1"
+crossterm = { version = "0.28.1", features = ["event-stream"] }
+futures = "0.3"
+ratatui = "0.29"
 
 
 [build-dependencies]
