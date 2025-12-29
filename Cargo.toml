@@ -6,8 +6,8 @@ edition = "2021"
 # Default binary (src/main.rs) - this is automatic
 # Additional binary targets can be specified here:
 [[bin]]
-name = "base-advanced-control"
-path = "example/base-advanced-control.rs"
+name = "base-advanced-control-websocket"
+path = "example/base-advanced-control-websocket.rs"
 
 [dependencies]
 futures-channel = "0.3.31"
