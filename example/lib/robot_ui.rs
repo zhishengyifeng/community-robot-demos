@@ -180,6 +180,7 @@ impl RobotUi {
                 Span::styled("[C]", Style::default().fg(Color::Red)),
                 Span::styled(" Exit", Style::default().fg(Color::White)),
             ]),
+            Line::from(vec![Span::styled("Due to terminal limitations, the vehicle will still move slightly even when the keys are released.", Style::default().fg(Color::White))]),
         ];
 
         Paragraph::new(controls)

@@ -254,10 +254,9 @@ fn spawn_websocket_receiver(
             let msg = msg.unwrap();
             if let tungstenite::Message::Binary(bytes) = msg {
                 let msg = base_backend::ApiUp::decode(bytes).unwrap();
-                // if let Some(log) = msg.log {
-                //     *error_message.lock().unwrap() =
-                //         ErrorMessage::new(format!("Log: {:?}", log));
-                // }
+                if let Some(log) = msg.log {
+                    *error_message.lock().unwrap() = ErrorMessage::new(format!("Log: {:?}", log));
+                }
                 let session_id = msg.session_id;
                 let protocol_version = msg.protocol_major_version;
                 if let Some(base_backend::api_up::Status::BaseStatus(base_status)) = msg.status {
