@@ -74,11 +74,8 @@ async fn main() {
     };
 
     // Set TCP nodelay for better performance
-    match ws_stream.get_ref() {
-        MaybeTlsStream::Plain(stream) => {
-            stream.set_nodelay(true).unwrap();
-        }
-        _ => {}
+    if let MaybeTlsStream::Plain(stream) = ws_stream.get_ref() {
+        stream.set_nodelay(true).unwrap();
     }
     let (mut ws_sink, ws_stream) = ws_stream.split();
 
@@ -116,7 +113,7 @@ async fn main() {
         let emergency = *emergency_stop.lock().unwrap();
 
         // Draw UI
-        if ui
+        let _ = ui
             .draw(
                 current_state,
                 &target_speed,
@@ -125,8 +122,7 @@ async fn main() {
                 &error_msg,
                 emergency,
             )
-            .is_err()
-        {}
+            .is_err();
 
         // Check if we should exit
         if keyboard_clone.should_exit() {
@@ -256,42 +252,35 @@ fn spawn_websocket_receiver(
     tokio::spawn(async move {
         while let Some(msg) = ws_stream.next().await {
             let msg = msg.unwrap();
-            match msg {
-                tungstenite::Message::Binary(bytes) => {
-                    let msg = base_backend::ApiUp::decode(bytes).unwrap();
-                    if let Some(log) = msg.log {
+            if let tungstenite::Message::Binary(bytes) = msg {
+                let msg = base_backend::ApiUp::decode(bytes).unwrap();
+                // if let Some(log) = msg.log {
+                //     *error_message.lock().unwrap() =
+                //         ErrorMessage::new(format!("Log: {:?}", log));
+                // }
+                let session_id = msg.session_id;
+                let protocol_version = msg.protocol_major_version;
+                if let Some(base_backend::api_up::Status::BaseStatus(base_status)) = msg.status {
+                    let state = handle_base_status(
+                        &base_status,
+                        session_id,
+                        odometry_data.clone(),
+                        emergency_stop.clone(),
+                        error_message.clone(),
+                    );
+                    *control_state.lock().unwrap() = state;
+                    // Only show control loss message when actually losing control
+                    if state == ControlState::InitializedButNotHold {
                         *error_message.lock().unwrap() =
-                            ErrorMessage::new(format!("Log: {:?}", log));
+                            ErrorMessage::new("Control in hands of another user".to_string());
                     }
-                    let session_id = msg.session_id;
-                    let protocol_version = msg.protocol_major_version;
-                    match msg.status {
-                        Some(base_backend::api_up::Status::BaseStatus(base_status)) => {
-                            let state = handle_base_status(
-                                &base_status,
-                                session_id,
-                                odometry_data.clone(),
-                                emergency_stop.clone(),
-                                error_message.clone(),
-                            );
-                            *control_state.lock().unwrap() = state;
-                            // Only show control loss message when actually losing control
-                            if state == ControlState::InitializedButNotHold {
-                                *error_message.lock().unwrap() = ErrorMessage::new(
-                                    "Control in hands of another user".to_string(),
-                                );
-                            }
-                            if state == ControlState::CanMove
-                                && protocol_version != ACCEPTABLE_PROTOCOL_MAJOR_VERSION
-                            {
-                                *error_message.lock().unwrap() =
-                                    ErrorMessage::new("Protocol version mismatch".to_string());
-                            }
-                        }
-                        _ => {}
+                    if state == ControlState::CanMove
+                        && protocol_version != ACCEPTABLE_PROTOCOL_MAJOR_VERSION
+                    {
+                        *error_message.lock().unwrap() =
+                            ErrorMessage::new("Protocol version mismatch".to_string());
                     }
                 }
-                _ => {}
             };
         }
     });

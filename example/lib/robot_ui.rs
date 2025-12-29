@@ -3,9 +3,9 @@
 // ============================================================================
 
 use crossterm::{
+    event::KeyCode,
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    event::KeyCode,
 };
 use hyper::HeaderMap;
 use ratatui::{
@@ -19,8 +19,8 @@ use ratatui::{
 use std::collections::HashMap;
 use std::io;
 
-use super::keyboard_input::SpeedData;
 use super::keyboard_input::KeyState;
+use super::keyboard_input::SpeedData;
 
 /// Control state of the robot
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -177,7 +177,7 @@ impl RobotUi {
                 Span::styled(" Rotate Right", Style::default().fg(Color::White)),
             ]),
             Line::from(vec![
-                Span::styled("[ESC/C]", Style::default().fg(Color::Red)),
+                Span::styled("[C]", Style::default().fg(Color::Red)),
                 Span::styled(" Exit", Style::default().fg(Color::White)),
             ]),
         ];
@@ -218,11 +218,7 @@ impl RobotUi {
         ];
 
         Paragraph::new(lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Target Speed"),
-            )
+            .block(Block::default().borders(Borders::ALL).title("Target Speed"))
             .alignment(Alignment::Left)
     }
 
@@ -232,11 +228,17 @@ impl RobotUi {
             vec![
                 Line::from(vec![
                     Span::styled("X: ", Style::default().fg(Color::Gray)),
-                    Span::styled(format!("{:+.3} m/s", s.x), Style::default().fg(Color::White)),
+                    Span::styled(
+                        format!("{:+.3} m/s", s.x),
+                        Style::default().fg(Color::White),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("Y: ", Style::default().fg(Color::Gray)),
-                    Span::styled(format!("{:+.3} m/s", s.y), Style::default().fg(Color::White)),
+                    Span::styled(
+                        format!("{:+.3} m/s", s.y),
+                        Style::default().fg(Color::White),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("Z: ", Style::default().fg(Color::Gray)),
@@ -254,11 +256,7 @@ impl RobotUi {
         };
 
         Paragraph::new(lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Actual Speed"),
-            )
+            .block(Block::default().borders(Borders::ALL).title("Actual Speed"))
             .alignment(Alignment::Left)
     }
 
@@ -270,69 +268,65 @@ impl RobotUi {
     ) -> Paragraph<'static> {
         let has_error = !error_message.message.is_empty();
 
-        let (status_text, status_style, border_style) = 
-            if emergency_stop {
-                (
-                     format!("EMERGENCY STOP: {}", error_message.message),
-                     Style::default()
-                         .fg(Color::Red)
-                         .add_modifier(Modifier::BOLD),
-                     Style::default()
-                         .fg(Color::Red)
-                         .add_modifier(Modifier::BOLD),
-                )
-            }else { 
-                match control_state {
-                    ControlState::Uninitialized => (
-                        "Status: Initializing...".to_string(),
-                        Style::default().fg(Color::Cyan),
-                        Style::default(),
-                    ),
-                    ControlState::InitializedButNotHold => {
-                        if has_error {
-                            (
-                                format!("Warn: {}", error_message.message),
-                                Style::default()
-                                    .fg(Color::Yellow)
-                                    .add_modifier(Modifier::BOLD),
-                                Style::default()
-                                    .fg(Color::Yellow)
-                                    .add_modifier(Modifier::BOLD),
-                            )
-                        } else {
-                            (
-                                "Status: NO CONTROL".to_string(),
-                                Style::default()
-                                    .fg(Color::Yellow)
-                                    .add_modifier(Modifier::BOLD),
-                                Style::default()
-                                    .fg(Color::Yellow)
-                                    .add_modifier(Modifier::BOLD),
-                            )
-                        }
+        let (status_text, status_style, border_style) = if emergency_stop {
+            (
+                format!("EMERGENCY STOP: {}", error_message.message),
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            )
+        } else {
+            match control_state {
+                ControlState::Uninitialized => (
+                    "Status: Initializing...".to_string(),
+                    Style::default().fg(Color::Cyan),
+                    Style::default(),
+                ),
+                ControlState::InitializedButNotHold => {
+                    if has_error {
+                        (
+                            format!("Warn: {}", error_message.message),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                        )
+                    } else {
+                        (
+                            "Status: NO CONTROL".to_string(),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                        )
                     }
-                    ControlState::CanMove => { 
-                            if has_error {
-                                (
-                                     format!("warn: {}", error_message.message),
-                                    Style::default()
-                                        .fg(Color::Yellow)
-                                        .add_modifier(Modifier::BOLD),
-                                    Style::default()
-                                        .fg(Color::Yellow)
-                                        .add_modifier(Modifier::BOLD),
-                                )
-                            } else {
-                                (               
-                                    "Status: Ready to Move".to_string(),
-                                    Style::default()
-                                        .fg(Color::Green)
-                                        .add_modifier(Modifier::BOLD),
-                                    Style::default(),
-                                )
-                            }
-                        }
-                }};
+                }
+                ControlState::CanMove => {
+                    if has_error {
+                        (
+                            format!("warn: {}", error_message.message),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                        )
+                    } else {
+                        (
+                            "Status: Ready to Move".to_string(),
+                            Style::default()
+                                .fg(Color::Green)
+                                .add_modifier(Modifier::BOLD),
+                            Style::default(),
+                        )
+                    }
+                }
+            }
+        };
 
         let status_block = if has_error
             || emergency_stop
@@ -343,9 +337,7 @@ impl RobotUi {
                 .title("Robot Status")
                 .border_style(border_style)
         } else {
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Robot Status")
+            Block::default().borders(Borders::ALL).title("Robot Status")
         };
 
         Paragraph::new(status_text)
